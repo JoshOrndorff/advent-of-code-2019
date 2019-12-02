@@ -1,11 +1,24 @@
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+
 fn main() {
-    println!("Hello, world!");
+    // Read data from file
+    let f = BufReader::new(File::open("input.txt").unwrap());
+    let masses: Vec<u32> = f
+        .lines()
+        .map(|l| l.unwrap().parse::<u32>().unwrap())
+        .collect();
+
+    // Calcualte total fuel
+    let total_fuel = masses.iter().map(fuel).sum::<u32>();
+
+    // Print result
+    println!("Total fuel needed: {}", total_fuel);
 }
 
-fn fuel(mass: u32) -> u32 {
+fn fuel(mass: &u32) -> u32 {
     (mass / 3) - 2
 }
-
 
 #[cfg(test)]
 mod test {

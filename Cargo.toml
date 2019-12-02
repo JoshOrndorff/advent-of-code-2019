@@ -1,0 +1,14 @@
+[package]
+name = "AOC2019"
+version = "0.1.0"
+authors = ["Joshy Orndorff"]
+edition = "2018"
+
+[workspace]
+members = [
+  "day1",
+]
+
+[[bin]]
+name = "day1"
+path = "day1/src/main.rs"
