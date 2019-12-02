@@ -10,10 +10,12 @@ fn main() {
         .collect();
 
     // Calcualte total fuel
-    let total_fuel = masses.iter().map(fuel).sum::<u32>();
+    let total_fuel_1 = masses.iter().map(fuel).sum::<u32>();
+    let total_fuel_2 = masses.iter().map(more_fuel).sum::<u32>();
 
     // Print result
-    println!("Total fuel needed: {}", total_fuel);
+    println!("Part1 Fuel: {}", total_fuel_1);
+    println!("Part2 Fuel: {}", total_fuel_2);
 }
 
 fn more_fuel(mass: &u32) -> u32 {
