@@ -7,8 +7,6 @@ fn main() {
     // Parse into list of numbers
     let mut tape1 = string_to_tape(&s);
     let mut tape2 = tape1.clone();
-    println!("Tape 1: {:?}", tape1);
-    println!("Tape 2: {:?}", tape2);
 
     // Compute part 1 result
     let part_1_result = part_1(&mut tape1);
@@ -16,7 +14,7 @@ fn main() {
     //TODO Compute part 2 result
 
     // Print results
-    println!("{:?}", part_1_result);
+    println!("First cell in 1202 tape: {:?}", part_1_result);
 }
 
 fn string_to_tape(s: &str) -> Vec<usize> {
@@ -30,8 +28,6 @@ fn part_1(tape: &mut Vec<usize>) -> usize {
     // Make tape 1202 state
     tape[1] = 12;
     tape[2] = 02;
-
-    println!("Debug: part 1 starting tape: {:?}", tape);
 
     // Execute the program
     execute(tape);
@@ -47,8 +43,8 @@ fn execute(tape: &mut Vec<usize>) {
     // Execution loop
     while tape[pointer] != 99 {
 
-        println!("executing. pointer: {:?}", pointer);
-        println!("prestate: {:?}", tape);
+        // println!("executing. pointer: {:?}", pointer);
+        // println!("prestate: {:?}", tape);
 
         let opcode = tape[pointer];
         let operand1 = tape[tape[pointer + 1]];
@@ -65,7 +61,7 @@ fn execute(tape: &mut Vec<usize>) {
             panic!("Invalid opcode: {}", opcode)
         };
 
-        println!("poststate: {:?}", tape);
+        // println!("poststate: {:?}", tape);
 
         pointer += 4;
     }
@@ -81,7 +77,51 @@ mod tests {
         let expected = string_to_tape("3500,9,10,70,2,3,11,0,99,30,40,50");
 
         execute(&mut experimental);
-
         assert_eq!(expected, experimental);
     }
+
+    #[test]
+    fn ex1_1() {
+        let mut experimental = string_to_tape("1,0,0,0,99");
+        let expected = string_to_tape("2,0,0,0,99");
+
+        execute(&mut experimental);
+        assert_eq!(expected, experimental);
+    }
+
+    #[test]
+    fn ex1_2() {
+        let mut experimental = string_to_tape("2,3,0,3,99");
+        let expected = string_to_tape("2,3,0,6,99");
+
+        execute(&mut experimental);
+        assert_eq!(expected, experimental);
+    }
+
+    #[test]
+    fn ex1_3() {
+        let mut experimental = string_to_tape("2,4,4,5,99,0");
+        let expected = string_to_tape("2,4,4,5,99,9801");
+
+        execute(&mut experimental);
+        assert_eq!(expected, experimental);
+    }
+
+    #[test]
+    fn ex1_4() {
+        let mut experimental = string_to_tape("1,1,1,4,99,5,6,0,99");
+        let expected = string_to_tape("30,1,1,4,2,5,6,0,99");
+
+        execute(&mut experimental);
+        assert_eq!(expected, experimental);
+    }
+
+    // #[test]
+    // fn ex??() {
+    //     let mut experimental = string_to_tape("");
+    //     let expected = string_to_tape("");
+    //
+    //     execute(&mut experimental);
+    //     assert_eq!(expected, experimental);
+    // }
 }
