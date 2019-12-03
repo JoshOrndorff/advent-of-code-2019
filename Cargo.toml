@@ -8,12 +8,17 @@ edition = "2018"
 members = [
   "day01",
   "day02",
+  "day03",
 ]
 
 [[bin]]
 name = "day1"
-path = "day1/src/main.rs"
+path = "day01/src/main.rs"
 
 [[bin]]
 name = "day2"
-path = "day2/src/main.rs"
+path = "day02/src/main.rs"
+
+[[bin]]
+name = "day3"
+path = "day02/src/main.rs"
