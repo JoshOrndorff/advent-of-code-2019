@@ -1,20 +1,23 @@
 use std::fs;
 
+const TARGET: usize = 19690720;
+
 fn main() {
     // Read input file to string
     let s = fs::read_to_string("input.txt").unwrap();
 
     // Parse into list of numbers
-    let mut tape1 = string_to_tape(&s);
-    let mut tape2 = tape1.clone();
+    let initial_tape = string_to_tape(&s);
 
     // Compute part 1 result
-    let part_1_result = part_1(&mut tape1);
+    let part_1_result = part_1(&mut initial_tape.clone());
 
-    //TODO Compute part 2 result
+    // Compute part 2 result
+    let part_2_result = part_2(&mut initial_tape.clone());
 
     // Print results
     println!("First cell in 1202 tape: {:?}", part_1_result);
+    println!("Input that yields {}: {}", TARGET, part_2_result);
 }
 
 fn string_to_tape(s: &str) -> Vec<usize> {
@@ -34,6 +37,49 @@ fn part_1(tape: &mut Vec<usize>) -> usize {
 
     // Return value in cell 0
     tape[0]
+}
+
+fn part_2(initialized_tape: &Vec<usize>) -> usize {
+    // Naive idea: choose a square size and brute force it.
+    // Better idea: add a layer to the onion each time.
+    // 0 1 4
+    // 3 2 5
+    // 8 7 6
+
+    let mut active_tape = initialized_tape.clone();
+    let mut layer = 0;
+
+    // Search loop through each layer
+    loop {
+
+        // Search the top
+        for noun in 0..layer {
+            active_tape = initialized_tape.clone();
+            println!("On top of layer {}. Checking {}{}", layer, noun, layer);
+            active_tape[1] = noun;
+            active_tape[2] = layer;
+            execute(&mut active_tape);
+            if active_tape[0] == TARGET {
+                return 100 * noun * layer;
+            }
+        }
+
+        // Search the right
+        // TODO I think I'm double-checking the diagonal
+        for verb in 0..layer {
+            active_tape = initialized_tape.clone();
+            println!("On right of layer {}. Checking {}{}", layer, layer, verb);
+            active_tape[1] = layer;
+            active_tape[2] = verb;
+            execute(&mut active_tape);
+            if active_tape[0] == TARGET {
+                return 100 * layer * verb;
+            }
+
+        }
+
+        layer += 1;
+    }
 }
 
 /// Given a mutable tape, mutates it according to intcode rules
