@@ -25,18 +25,22 @@ fn main() {
     let f = BufReader::new(File::open("input.txt").unwrap());
     let paths: Vec<_> = f
         .lines()
-        .map(|l| parse_path(&l.unwrap()))
+        .map(|l| l.unwrap())
         .collect();
 
     // Calcualte
-    let points1 = path_to_points(&paths[0]);
-    let points2 = path_to_points(&paths[1]);
-    let intersection_points = points1.intersection(&points2);
-
-    let shortest = intersection_points.map(manhattan_distance).min();
+    let shortest = part1(&paths[0], &paths[1]);
 
     // Print result
     println!("smallest distance: {:?}", shortest);
+}
+
+fn part1(path1: &str, path2: &str) -> usize {
+    let points1 = path_to_points(&parse_path(path1));
+    let points2 = path_to_points(&parse_path(path2));
+    let intersection_points = points1.intersection(&points2);
+
+    intersection_points.map(manhattan_distance).min().unwrap()
 }
 
 //TODO Maybe nom would be better for this stuff
@@ -95,10 +99,18 @@ fn manhattan_distance(p: &Point) -> usize {
 mod test {
     use crate::*;
 
-    // #[test]
-    // fn no_negative_more_fuel() {
-    //     assert_eq!(more_fuel(&0), 0);
-    //     assert_eq!(more_fuel(&8), 0);
-    //     assert_eq!(more_fuel(&9), 1);
-    // }
+    #[test]
+    fn long_example() {
+        assert_eq!(part1("R8,U5,L5,D3", "U7,R6,D4,L4"), 6);
+    }
+
+    #[test]
+    fn ex1_1() {
+        assert_eq!(part1("R75,D30,R83,U83,L12,D49,R71,U7,L72", "U62,R66,U55,R34,D71,R55,D58,R83"), 159);
+    }
+
+    #[test]
+    fn ex1_2() {
+        assert_eq!(part1("R98,U47,R26,D63,R33,U87,L62,D20,R33,U53,R51", "U98,R91,D20,R16,D67,R40,U7,R15,U6,R7"), 135);
+    }
 }
