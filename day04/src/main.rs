@@ -16,8 +16,9 @@ fn main() {
 
     // Search Loop
     let mut count = 0;
-    for i in lower..=upper {
-        if passes_checks(i) {
+    for num in lower..=upper {
+        let digits = get_digits(num);
+        if passes_checks(&digits) {
             count += 1;
         }
     }
@@ -26,14 +27,19 @@ fn main() {
     println!("count: {}", count);
 }
 
-fn passes_checks(candidate: usize) -> bool {
-    let mut copy = candidate;
+/// Given an integer, returns a vector of digits
+fn get_digits (num: usize) -> Vec<usize> {
+    let mut copy = num;
     let mut digits: Vec<usize> = Vec::new();
     while copy > 0 {
         digits.push(copy % 10);
         copy /= 10;
     }
+    digits.reverse();
+    digits
+}
 
+fn passes_checks(digits: &Vec<usize>) -> bool {
     six_digits(&digits) && repeated_digit(&digits) && monotonic(&digits)
 }
 
@@ -71,16 +77,16 @@ mod test {
 
     #[test]
     fn ex1_1() {
-        assert!(passes_checks(111111));
+        assert!(passes_checks(&get_digits(111111)));
     }
 
     #[test]
     fn ex1_2() {
-        assert!(!passes_checks(223450));
+        assert!(!passes_checks(&get_digits(223450)));
     }
 
     #[test]
     fn ex1_3() {
-        assert!(!passes_checks(123789));
+        assert!(!passes_checks(&get_digits(123789)));
     }
 }
