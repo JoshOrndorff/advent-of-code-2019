@@ -15,16 +15,21 @@ fn main() {
     println!("Final bounds: {}-{}", lower, upper);
 
     // Search Loop
-    let mut count = 0;
+    let mut count1 = 0;
+    let mut count2 = 0;
     for num in lower..=upper {
         let digits = get_digits(num);
-        if passes_checks(&digits) {
-            count += 1;
+        if part_1_checks(&digits) {
+            count1 += 1;
+        }
+        if part_2_checks(&digits) {
+            count2 += 1;
         }
     }
 
     // Print result
-    println!("count: {}", count);
+    println!("valid part 1 passwords: {}", count1);
+    println!("valid part 2 passwords: {}", count2);
 }
 
 /// Given an integer, returns a vector of digits
@@ -39,8 +44,21 @@ fn get_digits (num: usize) -> Vec<usize> {
     digits
 }
 
-fn passes_checks(digits: &Vec<usize>) -> bool {
+fn part_1_checks(digits: &Vec<usize>) -> bool {
     six_digits(&digits) && repeated_digit(&digits) && monotonic(&digits)
+}
+
+fn part_2_checks(digits: &Vec<usize>) -> bool {
+    six_digits(&digits) && specific_repeated_digit(&digits) && monotonic(&digits)
+}
+
+fn specific_repeated_digit(digits: &Vec<usize>) -> bool {
+    // With only six digits, it seems as wise to hard code all possibilities
+                              (digits[0] == digits[1] && digits[1] != digits[2]) ||
+    (digits[0] != digits[1] && digits[1] == digits[2] && digits[2] != digits[3]) ||
+    (digits[1] != digits[2] && digits[2] == digits[3] && digits[3] != digits[4]) ||
+    (digits[2] != digits[3] && digits[3] == digits[4] && digits[4] != digits[5]) ||
+    (digits[3] != digits[4] && digits[4] == digits[5])
 }
 
 fn six_digits(digits: &Vec<usize>) -> bool {
@@ -77,16 +95,31 @@ mod test {
 
     #[test]
     fn ex1_1() {
-        assert!(passes_checks(&get_digits(111111)));
+        assert!(part_1_checks(&get_digits(111111)));
     }
 
     #[test]
     fn ex1_2() {
-        assert!(!passes_checks(&get_digits(223450)));
+        assert!(!part_1_checks(&get_digits(223450)));
     }
 
     #[test]
     fn ex1_3() {
-        assert!(!passes_checks(&get_digits(123789)));
+        assert!(!part_1_checks(&get_digits(123789)));
+    }
+
+    #[test]
+    fn ex2_1() {
+        assert!(part_1_checks(&get_digits(111111)));
+    }
+
+    #[test]
+    fn ex2_2() {
+        assert!(!part_1_checks(&get_digits(223450)));
+    }
+
+    #[test]
+    fn ex2_3() {
+        assert!(part_1_checks(&get_digits(123789)));
     }
 }
