@@ -47,25 +47,15 @@ impl Intcode {
 
     /// Create a new Intcode instance from the given string, and input noun and verb.
     pub fn new_with_input(s: &str, noun: usize, verb: usize) -> Self {
+        let mut ic = Self::new(s);
 
-        let mut memory: Vec<usize> = s.trim_end()
-        .split(",")
-        .map(|s| s.parse().unwrap())
-        .collect();
-
-        memory[1] = noun;
-        memory[2] = verb;
-
-        Self {
-            memory,
-            pointer: 0,
-            halted: false,
-        }
+        ic.memory[1] = noun;
+        ic.memory[2] = verb;
+        ic
     }
 
     /// Create a new Intcode instance directly from the given string
     pub fn new(s: &str) -> Self {
-        //TODO too much duplicated code in `new` methods
         let memory: Vec<usize> = s.trim_end()
         .split(",")
         .map(|s| s.parse().unwrap())
