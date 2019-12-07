@@ -22,8 +22,17 @@ fn main() {
     let mut running_total = 0;
     part1(&system, &"COM", 0, &mut running_total);
 
+    // Solve part 2
+    let mut you_path = path(&system, &"COM", &"YOU").unwrap();
+    you_path.reverse();
+    let mut santa_path = path(&system, &"COM", &"SAN").unwrap();
+    santa_path.reverse();
+
     // Print results
-    println!("{:?}", running_total);
+    println!("{}", running_total);
+    println!("Path from com to you: {:?}", you_path);
+    println!("Path from com to santa: {:?}", santa_path);
+    println!("Distance from you to santa: {}", part2(you_path.as_slice(), &santa_path.as_slice()));
 }
 
 fn parse_system(orbits_strings: &Vec<String>) -> HashMap<&str, HashSet<&str>> {
@@ -44,6 +53,25 @@ fn parse_system(orbits_strings: &Vec<String>) -> HashMap<&str, HashSet<&str>> {
     system
 }
 
+fn path(system: &HashMap<&str, HashSet<&str>>, start: &str, target: &str) -> Option<Vec<String>> {
+    if start == target {
+        Some(vec![])
+    } else {
+        match system.get(start) {
+            None => None,
+            Some(children) => {
+                for child in children {
+                    if let Some(mut p) = path(system, child, target) {
+                        p.push(String::from(start));
+                        return Some(p)
+                    }
+                }
+                None
+            }
+        }
+    }
+}
+
 fn part1(system: &HashMap<&str, HashSet<&str>>, start: &str, depth: usize, running_total: &mut usize) {
     *running_total += depth;
     match system.get(start) {
@@ -53,6 +81,16 @@ fn part1(system: &HashMap<&str, HashSet<&str>>, start: &str, depth: usize, runni
                 part1(system, child, depth + 1, running_total);
             }
         }
+    }
+}
+
+/// Takes two paths with a potentially common prefix. Chomps off the common prefix, and
+/// returns the combined lengths of the other paths.
+fn part2(path1: &[String], path2: &[String]) -> usize {
+    if path1[0] == path2[0] {
+        part2(&path1[1..path1.len()], &path2[1..path2.len()])
+    } else {
+        path1.len() + path2.len()
     }
 }
 
