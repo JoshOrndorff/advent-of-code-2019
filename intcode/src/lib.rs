@@ -93,11 +93,15 @@ impl Intcode {
                 // for the result cell to be location mode
                 let result_cell = self.memory[self.pointer + 1] as usize;
                 self.memory[result_cell] = input_value;
+
             } else if operation.opcode == 4 {
                 // Output instruction
-                // I'm not even looking at the mode here. It does make sense to
-                // output an immediate, but the instructions don't describe that happening
-                let output_value = self.memory[self.pointer + 1];
+                let output_value = self.memory[
+                    match operation.modes[0] {
+                        Mode::Position => self.memory[self.pointer + 1] as usize,
+                        Mode::Immediate => self.pointer + 1,
+                    }
+                ];
                 self.output.push_back(output_value);
             } else {
                 panic!("Invalid opcode: {}", opcode)
@@ -197,8 +201,16 @@ fn parse_operation(n: isize) -> Operation {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn direct_io_1() {
+        let mut input = VecDeque::new();
+        input.push_back(1);
+        let mut machine = Intcode::new_with_input(&"3,0,4,0,99", input);
+        machine.execute();
+        let mut expected = VecDeque::new();
+        expected.push_back(1);
+        assert_eq!(machine.get_output(), expected);
     }
 }

@@ -1,5 +1,3 @@
-// 224 is too low
-
 use std::fs;
 use intcode::Intcode;
 use std::collections::VecDeque;
