@@ -1,7 +1,7 @@
 use std::fs;
 use intcode::Intcode;
 
-const TARGET: usize = 19690720;
+const TARGET: isize = 19690720;
 
 fn main() {
     // Read input file to string
@@ -16,9 +16,16 @@ fn main() {
     println!("Input that yields {}: {}", TARGET, part_2_result);
 }
 
-fn part_1(s: &str) -> usize {
+fn intcode_with_custom_inputs(s: &str, noun: isize, verb: isize) -> Intcode {
+    let mut ic = Intcode::new(s);
+    ic.mutate_memory(1, noun);
+    ic.mutate_memory(2, verb);
+    ic
+}
+
+fn part_1(s: &str) -> isize {
     // New intcode instance with given input and code 1202
-    let mut tape = Intcode::new_with_input(s, 12, 02);
+    let mut tape = intcode_with_custom_inputs(s, 12, 02);
 
     // Execute the program
     tape.execute();
@@ -27,7 +34,7 @@ fn part_1(s: &str) -> usize {
     tape.read(0)
 }
 
-fn part_2(s: &str) -> usize {
+fn part_2(s: &str) -> isize {
     // Search Algorithm: add a layer to the onion each time.
     // 0 1 4
     // 3 2 5
@@ -41,7 +48,7 @@ fn part_2(s: &str) -> usize {
 
         // Search the top
         for noun in 0..layer {
-            active_tape = Intcode::new_with_input(&s, noun, layer);
+            active_tape = intcode_with_custom_inputs(&s, noun, layer);
             active_tape.execute();
             if active_tape.read(0) == TARGET {
                 return 100 * noun + layer;
@@ -51,7 +58,7 @@ fn part_2(s: &str) -> usize {
         // Search the right
         // TODO I think I'm double-checking the diagonal
         for verb in 0..layer {
-            active_tape = Intcode::new_with_input(&s, layer, verb);
+            active_tape = intcode_with_custom_inputs(&s, layer, verb);
             active_tape.execute();
             if active_tape.read(0) == TARGET {
                 return 100 * layer + verb;
