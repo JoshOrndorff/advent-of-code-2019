@@ -56,6 +56,7 @@ impl Intcode {
             } else if operation.opcode == 3 {
                 // Input instruction
                 let input_value = self.input.pop_front().unwrap();
+                println!("Taking input: {}", input_value);
                 self.memory[operation.operand_locations[0]] = input_value;
 
             } else if operation.opcode == 4 {
@@ -113,10 +114,10 @@ impl Intcode {
     }
 
     /// Create a new Intcode instance from the given string, and input.
-    pub fn new_with_input(s: &str, input: VecDeque<isize>) -> Self {
+    pub fn new_with_input(s: &str, input: &VecDeque<isize>) -> Self {
         let mut ic = Self::new(s);
 
-        ic.input = input;
+        ic.input = input.clone();
         ic
     }
 
