@@ -4,8 +4,9 @@ use std::collections::VecDeque;
 // opcode 0 is not valid
 // opcodes 1 and 2 have length four (see day 2)
 // opcodes 3 and 4 have length two (see day 5 part 1)
-// opcodes 5, 6, 7, and 8 have length 3 (see day 5 part 2)
-const LENGTHS: [usize; 7] = [0, 4, 4, 2, 2, 3, 3];
+// opcodes 5 and 6 have length 3 (see day 5 part 2)
+// opcodes 7 and 8 have length 4 (see day 5 part 2)
+const LENGTHS: [usize; 9] = [0, 4, 4, 2, 2, 3, 3, 4, 4];
 
 #[derive(Eq, PartialEq, Debug)]
 struct Operation {
@@ -30,12 +31,13 @@ impl Intcode {
 
     /// Execute this Intcode instance until it halts
     pub fn execute(&mut self) {
+        let mut jumped = false;
 
         // Loop until halt instruction
         while self.memory[self.pointer] != 99 {
 
             let operation = self.parse_operation();
-            // println!("pointer: {:?}", self.pointer);
+            // println!("\n\npointer: {:?}", self.pointer);
             // println!("operation: {:?}", operation);
             // println!("prestate: {:?}", self.memory);
 
@@ -60,13 +62,53 @@ impl Intcode {
                 // Output instruction
                 let output_value = self.memory[operation.operand_locations[0]];
                 self.output.push_back(output_value);
+
+            } else if operation.opcode == 5 {
+                // Jump if true
+                let op0 = self.memory[operation.operand_locations[0]];
+                let op1 = self.memory[operation.operand_locations[1]];
+                println!("debugging opcode 5. Operands are {}, {}", op0, op1);
+                if op0 != 0 {
+                    self.pointer = op1 as usize;
+                    jumped = true;
+                }
+
+            } else if operation.opcode == 6 {
+                // Jump if false
+                let op0 = self.memory[operation.operand_locations[0]];
+                let op1 = self.memory[operation.operand_locations[1]];
+                if op0 == 0 {
+                    self.pointer = op1 as usize;
+                    jumped = true;
+                }
+
+            } else if operation.opcode == 7 {
+                // Less than
+                let op0 = self.memory[operation.operand_locations[0]];
+                let op1 = self.memory[operation.operand_locations[1]];
+                self.memory[operation.operand_locations[2]] = if op0 < op1 {
+                    1
+                } else {
+                    0
+                };
+            } else if operation.opcode == 8 {
+                // Equals
+                let op0 = self.memory[operation.operand_locations[0]];
+                let op1 = self.memory[operation.operand_locations[1]];
+                self.memory[operation.operand_locations[2]] = if op0 == op1 {
+                    1
+                } else {
+                    0
+                };
             } else {
                 panic!("Invalid opcode: {}", operation.opcode)
             };
 
-            // println!("poststate: {:?}", self.memory);
-
-            self.pointer += LENGTHS[operation.opcode];
+            // Adjust the pointer unless a jump instruction occurred
+            if !jumped {
+                self.pointer += LENGTHS[operation.opcode];
+            }
+            jumped = false;
         }
     }
 
