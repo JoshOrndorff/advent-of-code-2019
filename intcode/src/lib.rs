@@ -1,27 +1,22 @@
 use std::collections::VecDeque;
 
 // hardcoded lengths of opcodes.
+// opcode 0 is not valid
 // opcodes 1 and 2 have length four (see day 2)
-// opcodes 3 and 4 have length two (see day 5)
-const lengths: [usize; 5] = [0, 4, 4, 2, 2];
+// opcodes 3 and 4 have length two (see day 5 part 1)
+// opcodes 5, 6, 7, and 8 have length 3 (see day 5 part 2)
+const LENGTHS: [usize; 7] = [0, 4, 4, 2, 2, 3, 3];
 
-#[derive(Eq, PartialEq)]
-enum Mode {
-    Position,
-    Immediate,
-}
-
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Debug)]
 struct Operation {
     opcode: usize,
-    modes: Vec<Mode>,
+    operand_locations: Vec<usize>,
 }
 
 #[derive(Eq, PartialEq)]
 pub struct Intcode {
     memory: Vec<isize>,
     pointer: usize,
-    halted: bool,
     input: VecDeque<isize>,
     output: VecDeque<isize>,
 }
@@ -39,80 +34,40 @@ impl Intcode {
         // Loop until halt instruction
         while self.memory[self.pointer] != 99 {
 
-            // println!("executing. pointer: {:?}", pointer);
-            // println!("prestate: {:?}", tape);
-
-            let opcode = self.memory[self.pointer];
-            let operation = parse_operation(opcode);
+            let operation = self.parse_operation();
+            // println!("pointer: {:?}", self.pointer);
+            // println!("operation: {:?}", operation);
+            // println!("prestate: {:?}", self.memory);
 
             if operation.opcode == 1 {
                 // Add instruction
-                let operand1 = self.memory[
-                    match operation.modes[0] {
-                        Mode::Position => self.memory[self.pointer + 1] as usize,
-                        Mode::Immediate => self.pointer + 1,
-                    }
-                ];
-                let operand2 = self.memory[
-                    match operation.modes[1] {
-                        Mode::Position => self.memory[self.pointer + 2] as usize,
-                        Mode::Immediate => self.pointer + 2,
-                    }
-                ];
-                // I'm not even looking at the mode here. It only makes sense
-                // for the result cell to be location mode
-                let result_cell = self.memory[self.pointer + 3] as usize;
-
-                self.memory[result_cell] = operand1 + operand2;
+                let op0 = self.memory[operation.operand_locations[0]];
+                let op1 = self.memory[operation.operand_locations[1]];
+                self.memory[operation.operand_locations[2]] = op0 + op1;
 
             } else if operation.opcode == 2 {
                 // Multiply instruction
-                //TODO lots of duplicated code with addition
-                let operand1 = self.memory[
-                    match operation.modes[0] {
-                        Mode::Position => self.memory[self.pointer + 1] as usize,
-                        Mode::Immediate => self.pointer + 1,
-                    }
-                ];
-                let operand2 = self.memory[
-                    match operation.modes[1] {
-                        Mode::Position => self.memory[self.pointer + 2] as usize,
-                        Mode::Immediate => self.pointer + 2,
-                    }
-                ];
-                // I'm not even looking at the mode here. It only makes sense
-                // for the result cell to be location mode
-                let result_cell = self.memory[self.pointer + 3] as usize;
-
-                self.memory[result_cell] = operand1 * operand2;
+                let op0 = self.memory[operation.operand_locations[0]];
+                let op1 = self.memory[operation.operand_locations[1]];
+                self.memory[operation.operand_locations[2]] = op0 * op1;
 
             } else if operation.opcode == 3 {
                 // Input instruction
                 let input_value = self.input.pop_front().unwrap();
-                // I'm not even looking at the mode here. It only makes sense
-                // for the result cell to be location mode
-                let result_cell = self.memory[self.pointer + 1] as usize;
-                self.memory[result_cell] = input_value;
+                self.memory[operation.operand_locations[0]] = input_value;
 
             } else if operation.opcode == 4 {
                 // Output instruction
-                let output_value = self.memory[
-                    match operation.modes[0] {
-                        Mode::Position => self.memory[self.pointer + 1] as usize,
-                        Mode::Immediate => self.pointer + 1,
-                    }
-                ];
+                let output_value = self.memory[operation.operand_locations[0]];
                 self.output.push_back(output_value);
             } else {
-                panic!("Invalid opcode: {}", opcode)
+                panic!("Invalid opcode: {}", operation.opcode)
             };
 
             // println!("poststate: {:?}", self.memory);
 
-            self.pointer += lengths[operation.opcode];
+            self.pointer += LENGTHS[operation.opcode];
         }
-
-        self.halted = true;
     }
 
     /// Create a new Intcode instance from the given string, and input.
@@ -133,7 +88,6 @@ impl Intcode {
         Self {
             memory,
             pointer: 0,
-            halted: false,
             input: VecDeque::new(),
             output: VecDeque::new(),
         }
@@ -168,34 +122,36 @@ impl Intcode {
         s.pop();
         s
     }
-}
 
-/// Given a modes string and an expected number of modes, returns a vector of Mode variants
-fn get_modes(digits: usize, num:  usize) -> Vec<Mode> {
-    let mut modes = Vec::new();
-    let mut modes_digits = digits;
-    for _ in 1..num {
+    /// arses the operation at the current pointer location
+    /// Panics if the value at that cell is not a valid operation
+    fn parse_operation(&self) -> Operation {
+        let op_digits = self.memory[self.pointer] as usize;
+        let opcode: usize = op_digits % 100;
+        let mut modes_digits: usize = op_digits / 100;
 
-        if modes_digits % 10 == 1 {
-            modes.push(Mode::Immediate);
-        } else {
-            modes.push(Mode::Position);
+        // Expected number of operands for this opcode. Knowing this value is
+        // necessary because leading zeros may be omitted
+        let num_operands = LENGTHS[opcode];
+
+        // Loop through looking up the operands
+        let mut operand_locations: Vec<usize> = Vec::new();
+        for offset in 1..num_operands {
+
+            if modes_digits % 10 == 1 {
+                // Immediate
+                operand_locations.push(self.pointer + offset);
+            } else {
+                // Position
+                operand_locations.push(self.memory[self.pointer + offset] as usize);
+            }
+            modes_digits /= 10;
         }
-        modes_digits /= 10;
-    }
-    modes
-}
 
-
-fn parse_operation(n: isize) -> Operation {
-    let opcode: usize = n as usize % 100;
-    let modes_digits: usize = n as usize / 100;
-
-    let modes = get_modes(modes_digits, lengths[opcode]);
-
-    Operation {
-        opcode,
-        modes,
+        Operation {
+            opcode,
+            operand_locations,
+        }
     }
 }
 
