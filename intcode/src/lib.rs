@@ -56,7 +56,6 @@ impl Intcode {
             } else if operation.opcode == 3 {
                 // Input instruction
                 let input_value = self.input.pop_front().unwrap();
-                println!("Taking input: {}", input_value);
                 self.memory[operation.operand_locations[0]] = input_value;
 
             } else if operation.opcode == 4 {
@@ -68,7 +67,6 @@ impl Intcode {
                 // Jump if true
                 let op0 = self.memory[operation.operand_locations[0]];
                 let op1 = self.memory[operation.operand_locations[1]];
-                println!("debugging opcode 5. Operands are {}, {}", op0, op1);
                 if op0 != 0 {
                     self.pointer = op1 as usize;
                     jumped = true;
