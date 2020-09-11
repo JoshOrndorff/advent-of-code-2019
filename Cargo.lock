@@ -46,6 +46,10 @@ name = "day08"
 version = "0.1.0"
 
 [[package]]
+name = "day12"
+version = "0.1.0"
+
+[[package]]
 name = "intcode"
 version = "0.1.0"
 
