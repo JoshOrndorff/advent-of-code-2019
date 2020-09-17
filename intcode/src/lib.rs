@@ -35,7 +35,6 @@ impl Intcode {
 
         // Loop until halt instruction
         while self.memory[self.pointer] != 99 {
-
             let operation = self.parse_operation();
             // println!("\n\npointer: {:?}", self.pointer);
             // println!("operation: {:?}", operation);
@@ -46,23 +45,19 @@ impl Intcode {
                 let op0 = self.memory[operation.operand_locations[0]];
                 let op1 = self.memory[operation.operand_locations[1]];
                 self.memory[operation.operand_locations[2]] = op0 + op1;
-
             } else if operation.opcode == 2 {
                 // Multiply instruction
                 let op0 = self.memory[operation.operand_locations[0]];
                 let op1 = self.memory[operation.operand_locations[1]];
                 self.memory[operation.operand_locations[2]] = op0 * op1;
-
             } else if operation.opcode == 3 {
                 // Input instruction
                 let input_value = self.input.pop_front().unwrap();
                 self.memory[operation.operand_locations[0]] = input_value;
-
             } else if operation.opcode == 4 {
                 // Output instruction
                 let output_value = self.memory[operation.operand_locations[0]];
                 self.output.push_back(output_value);
-
             } else if operation.opcode == 5 {
                 // Jump if true
                 let op0 = self.memory[operation.operand_locations[0]];
@@ -71,7 +66,6 @@ impl Intcode {
                     self.pointer = op1 as usize;
                     jumped = true;
                 }
-
             } else if operation.opcode == 6 {
                 // Jump if false
                 let op0 = self.memory[operation.operand_locations[0]];
@@ -80,25 +74,16 @@ impl Intcode {
                     self.pointer = op1 as usize;
                     jumped = true;
                 }
-
             } else if operation.opcode == 7 {
                 // Less than
                 let op0 = self.memory[operation.operand_locations[0]];
                 let op1 = self.memory[operation.operand_locations[1]];
-                self.memory[operation.operand_locations[2]] = if op0 < op1 {
-                    1
-                } else {
-                    0
-                };
+                self.memory[operation.operand_locations[2]] = if op0 < op1 { 1 } else { 0 };
             } else if operation.opcode == 8 {
                 // Equals
                 let op0 = self.memory[operation.operand_locations[0]];
                 let op1 = self.memory[operation.operand_locations[1]];
-                self.memory[operation.operand_locations[2]] = if op0 == op1 {
-                    1
-                } else {
-                    0
-                };
+                self.memory[operation.operand_locations[2]] = if op0 == op1 { 1 } else { 0 };
             } else {
                 panic!("Invalid opcode: {}", operation.opcode)
             };
@@ -121,10 +106,11 @@ impl Intcode {
 
     /// Create a new Intcode instance directly from the given string
     pub fn new(s: &str) -> Self {
-        let memory: Vec<_> = s.trim_end()
-        .split(",")
-        .map(|s| s.parse().unwrap())
-        .collect();
+        let memory: Vec<_> = s
+            .trim_end()
+            .split(",")
+            .map(|s| s.parse().unwrap())
+            .collect();
 
         Self {
             memory,
@@ -178,7 +164,6 @@ impl Intcode {
         // Loop through looking up the operands
         let mut operand_locations: Vec<usize> = Vec::new();
         for offset in 1..num_operands {
-
             if modes_digits % 10 == 1 {
                 // Immediate
                 operand_locations.push(self.pointer + offset);

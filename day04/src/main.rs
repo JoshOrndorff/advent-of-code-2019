@@ -33,7 +33,7 @@ fn main() {
 }
 
 /// Given an integer, returns a vector of digits
-fn get_digits (num: usize) -> Vec<usize> {
+fn get_digits(num: usize) -> Vec<usize> {
     let mut copy = num;
     let mut digits: Vec<usize> = Vec::new();
     while copy > 0 {
@@ -54,11 +54,11 @@ fn part_2_checks(digits: &Vec<usize>) -> bool {
 
 fn specific_repeated_digit(digits: &Vec<usize>) -> bool {
     // With only six digits, it seems as wise to hard code all possibilities
-                              (digits[0] == digits[1] && digits[1] != digits[2]) ||
-    (digits[0] != digits[1] && digits[1] == digits[2] && digits[2] != digits[3]) ||
-    (digits[1] != digits[2] && digits[2] == digits[3] && digits[3] != digits[4]) ||
-    (digits[2] != digits[3] && digits[3] == digits[4] && digits[4] != digits[5]) ||
-    (digits[3] != digits[4] && digits[4] == digits[5])
+    (digits[0] == digits[1] && digits[1] != digits[2])
+        || (digits[0] != digits[1] && digits[1] == digits[2] && digits[2] != digits[3])
+        || (digits[1] != digits[2] && digits[2] == digits[3] && digits[3] != digits[4])
+        || (digits[2] != digits[3] && digits[3] == digits[4] && digits[4] != digits[5])
+        || (digits[3] != digits[4] && digits[4] == digits[5])
 }
 
 fn six_digits(digits: &Vec<usize>) -> bool {

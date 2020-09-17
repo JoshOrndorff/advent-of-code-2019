@@ -3,7 +3,6 @@ use std::fs;
 const WIDTH: usize = 25;
 const HEIGHT: usize = 6;
 
-
 fn main() {
     // Read input
     // TODO get it from file
@@ -14,13 +13,12 @@ fn main() {
     let grid = generate_grid(WIDTH, HEIGHT, &raw_data.trim_end());
     let rendered = part2(&grid);
 
-
     // Print results
     println!("part 1 result: {}", part1(&grid));
     println!("rendered output:");
     for row in rendered {
         for code in row {
-            print!{"{}", code_to_char(code)}
+            print! {"{}", code_to_char(code)}
         }
         println!();
     }
@@ -30,7 +28,7 @@ fn code_to_char(code: u8) -> char {
     match code {
         0 => ' ',
         1 => '#',
-        _ => panic!("Only 0 and 1 should be present in rendered output")
+        _ => panic!("Only 0 and 1 should be present in rendered output"),
     }
 }
 
@@ -49,8 +47,12 @@ fn generate_grid(width: usize, height: usize, data: &str) -> Vec<Vec<Vec<u8>>> {
                 next_char = chars.next();
                 match next_char {
                     // Hack ascii code to get u8s
-                    Some(c) => { row.push(c as u8 - 48); },
-                    None => {break 'outer;},
+                    Some(c) => {
+                        row.push(c as u8 - 48);
+                    }
+                    None => {
+                        break 'outer;
+                    }
                 }
             }
             layer.push(row);

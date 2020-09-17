@@ -32,7 +32,10 @@ fn main() {
     println!("{}", running_total);
     println!("Path from com to you: {:?}", you_path);
     println!("Path from com to santa: {:?}", santa_path);
-    println!("Distance from you to santa: {}", part2(you_path.as_slice(), &santa_path.as_slice()));
+    println!(
+        "Distance from you to santa: {}",
+        part2(you_path.as_slice(), &santa_path.as_slice())
+    );
 }
 
 fn parse_system(orbits_strings: &Vec<String>) -> HashMap<&str, HashSet<&str>> {
@@ -63,7 +66,7 @@ fn path(system: &HashMap<&str, HashSet<&str>>, start: &str, target: &str) -> Opt
                 for child in children {
                     if let Some(mut p) = path(system, child, target) {
                         p.push(String::from(start));
-                        return Some(p)
+                        return Some(p);
                     }
                 }
                 None
@@ -72,10 +75,15 @@ fn path(system: &HashMap<&str, HashSet<&str>>, start: &str, target: &str) -> Opt
     }
 }
 
-fn part1(system: &HashMap<&str, HashSet<&str>>, start: &str, depth: usize, running_total: &mut usize) {
+fn part1(
+    system: &HashMap<&str, HashSet<&str>>,
+    start: &str,
+    depth: usize,
+    running_total: &mut usize,
+) {
     *running_total += depth;
     match system.get(start) {
-        None => {},
+        None => {}
         Some(children) => {
             for child in children {
                 part1(system, child, depth + 1, running_total);
@@ -94,14 +102,12 @@ fn part2(path1: &[String], path2: &[String]) -> usize {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use crate::*;
 
     #[test]
     fn part_1_full() {
-
         let given: Vec<String> = vec![
             "COM)B", "B)C", "C)D", "D)E", "E)F", "B)G", "G)H", "D)I", "E)J", "J)K", "K)L",
         ]

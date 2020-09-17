@@ -1,5 +1,5 @@
-use std::fs;
 use intcode::Intcode;
+use std::fs;
 
 const TARGET: isize = 19690720;
 
@@ -45,7 +45,6 @@ fn part_2(s: &str) -> isize {
 
     // Search loop through each layer
     loop {
-
         // Search the top
         for noun in 0..layer {
             active_tape = intcode_with_custom_inputs(&s, noun, layer);
@@ -63,7 +62,6 @@ fn part_2(s: &str) -> isize {
             if active_tape.read(0) == TARGET {
                 return 100 * layer + verb;
             }
-
         }
 
         layer += 1;

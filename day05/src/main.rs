@@ -1,6 +1,6 @@
-use std::fs;
 use intcode::Intcode;
 use std::collections::VecDeque;
+use std::fs;
 
 fn main() {
     // Read input file to string

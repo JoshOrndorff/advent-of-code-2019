@@ -3,7 +3,7 @@ mod parser;
 
 #[derive(Hash, Debug, PartialEq, Eq, Clone)]
 struct Reagent {
-	//TODO should I be using &str everywhere?
+    //TODO should I be using &str everywhere?
     name: String,
     quantity: u64,
 }
@@ -19,7 +19,7 @@ impl State {
     fn new() -> Self {
         Self {
             reagents: BTreeMap::new(),
-			ore_consumed: 0,
+            ore_consumed: 0,
         }
     }
 
@@ -117,21 +117,22 @@ impl State {
     }
 
     fn gather_ore(&self) -> Self {
-		let mut next_state = self.clone();
+        let mut next_state = self.clone();
         *next_state.reagents.entry("ORE".into()).or_insert(0) += 1;
-		next_state.ore_consumed += 1;
-		next_state
+        next_state.ore_consumed += 1;
+        next_state
     }
 }
 
 #[derive(Hash, Debug, PartialEq, Eq, Clone)]
 pub struct Reaction {
     inputs: Vec<Reagent>,
+    //TODO only one output, so no need to loop
     outputs: Vec<Reagent>,
 }
 
-fn solve_part_1(reactions: &Vec<Reaction>) -> u64 {
-	// We'll solve the problem using Dijkstra's algorithm to find a path from no resources
+fn dijkstra_solution(reactions: &Vec<Reaction>) -> u64 {
+    // We'll solve the problem using Dijkstra's algorithm to find a path from no resources
     // to one fules
     let mut unexplored = HashSet::<State>::new();
     let mut explored = HashSet::<State>::new();
@@ -143,10 +144,12 @@ fn solve_part_1(reactions: &Vec<Reaction>) -> u64 {
     let mut current_state = State::new();
 
     while !current_state.has_fuel() {
-        println!("\n\nIn main dijkstra loop");
+        println!(
+            "\n\nIn main dijkstra loop with {} unexplored states",
+            unexplored.len()
+        );
 
-        //TODO current_state is not currently a reference. Can it be?
-        // Get a reference to the next state to explore
+        // Get an owned instance of the next state to explore
         current_state = unexplored
             .iter()
             .min_by(|x, y| x.ore_consumed.cmp(&y.ore_consumed))
@@ -166,7 +169,7 @@ fn solve_part_1(reactions: &Vec<Reaction>) -> u64 {
         explored.insert(unexplored.take(&current_state).unwrap());
 
         // We also want to explore gathering more ore because some reactions
-		// need more than 1 ore.
+        // need more than 1 ore.
         unexplored.insert(current_state.gather_ore());
 
         // Mark each neighbor as unexplored
@@ -176,21 +179,33 @@ fn solve_part_1(reactions: &Vec<Reaction>) -> u64 {
         }
     }
 
-	current_state.ore_consumed
+    std::thread::sleep(std::time::Duration::from_millis(500));
+
+    current_state.ore_consumed
 }
 
 fn main() {
     // Parse the puzzle input, which represents a set of reactions
-    let reactions = parser::parse_reactions("dummy");
+    let reactions = parser::parse_reactions(
+        "
+		9 ORE => 2 A
+		8 ORE => 3 B
+		7 ORE => 5 C
+		3 A, 4 B => 1 AB
+		5 B, 7 C => 1 BC
+		4 C, 1 A => 1 CA
+		2 AB, 3 BC, 4 CA => 1 FUEL
+	",
+    );
 
-	let part_1 = solve_part_1(&reactions);
+    let part_1 = dijkstra_solution(&reactions);
 
-	println!("Minimal ORE needed: {}", part_1);
+    println!("Minimal ORE needed: {}", part_1);
 }
 
 #[test]
 fn first_example() {
-	let input = "
+    let input = "
 		10 ORE => 10 A
 		1 ORE => 1 B
 		7 A, 1 B => 1 C
@@ -199,23 +214,24 @@ fn first_example() {
 		7 A, 1 E => 1 FUEL
 	";
 
-	let reactions = parser::parse_reactions(input);
+    let reactions = parser::parse_reactions(input);
 
-	assert_eq!(solve_part_1(&reactions), 31);
+    assert_eq!(dijkstra_solution(&reactions), 31);
 }
 
-// #[test]
-// fn second_example() {
-// 	let input = "\
-// 9 ORE => 2 A
-// 8 ORE => 3 B
-// 7 ORE => 5 C
-// 3 A, 4 B => 1 AB
-// 5 B, 7 C => 1 BC
-// 4 C, 1 A => 1 CA
-// 2 AB, 3 BC, 4 CA => 1 FUEL";
-//
-// 	let reactions = parser::parse_reactions(input);
-//
-// 	assert_eq!(solve_part_1(&reactions), 165);
-// }
+#[test]
+fn second_example() {
+    let input = "
+		9 ORE => 2 A
+		8 ORE => 3 B
+		7 ORE => 5 C
+		3 A, 4 B => 1 AB
+		5 B, 7 C => 1 BC
+		4 C, 1 A => 1 CA
+		2 AB, 3 BC, 4 CA => 1 FUEL
+	";
+
+    let reactions = parser::parse_reactions(input);
+
+    assert_eq!(dijkstra_solution(&reactions), 165);
+}
