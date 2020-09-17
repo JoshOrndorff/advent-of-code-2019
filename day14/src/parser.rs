@@ -50,20 +50,20 @@ fn first_example_parses() {
                 name: "ORE".into(),
                 quantity: 10,
             }],
-            outputs: vec![Reagent {
+            output: Reagent {
                 name: "A".into(),
                 quantity: 10,
-            }],
+            },
         },
         Reaction {
             inputs: vec![Reagent {
                 name: "ORE".into(),
                 quantity: 1,
             }],
-            outputs: vec![Reagent {
+            output: Reagent {
                 name: "B".into(),
                 quantity: 1,
-            }],
+            },
         },
         Reaction {
             inputs: vec![
@@ -76,10 +76,10 @@ fn first_example_parses() {
                     quantity: 1,
                 },
             ],
-            outputs: vec![Reagent {
+            output: Reagent {
                 name: "C".into(),
                 quantity: 1,
-            }],
+            },
         },
         Reaction {
             inputs: vec![
@@ -92,10 +92,10 @@ fn first_example_parses() {
                     quantity: 1,
                 },
             ],
-            outputs: vec![Reagent {
+            output: Reagent {
                 name: "D".into(),
                 quantity: 1,
-            }],
+            },
         },
         Reaction {
             inputs: vec![
@@ -108,10 +108,10 @@ fn first_example_parses() {
                     quantity: 1,
                 },
             ],
-            outputs: vec![Reagent {
+            output: Reagent {
                 name: "E".into(),
                 quantity: 1,
-            }],
+            },
         },
         Reaction {
             inputs: vec![
@@ -124,10 +124,10 @@ fn first_example_parses() {
                     quantity: 1,
                 },
             ],
-            outputs: vec![Reagent {
+            output: Reagent {
                 name: "FUEL".into(),
                 quantity: 1,
-            }],
+            },
         },
     ];
     assert_eq!(parse_reactions(input), expected);
