@@ -16,6 +16,7 @@ members = [
   "day07",
   "day08",
   "day12",
+  "day14",
 ]
 
 [[bin]]
