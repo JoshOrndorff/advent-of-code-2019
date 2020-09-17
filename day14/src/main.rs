@@ -1,17 +1,19 @@
 use std::collections::{BTreeMap, HashSet};
+use std::fs;
 mod parser;
+use std::convert::TryInto;
 
 #[derive(Hash, Debug, PartialEq, Eq, Clone)]
 struct Reagent {
     //TODO should I be using &str everywhere?
     name: String,
-    quantity: u64,
+    quantity: i64,
 }
 
 //todo better name
 #[derive(Hash, Debug, PartialEq, Eq, Clone)]
 struct State {
-    reagents: BTreeMap<String, u64>,
+    reagents: BTreeMap<String, i64>,
     ore_consumed: u64,
 }
 
@@ -23,90 +25,68 @@ impl State {
         }
     }
 
-    fn total_ore(&self) -> u64 {
-        match self.reagents.get("ORE".into()) {
-            Some(ore) => *ore,
-            None => 0,
-        }
+    fn new_one_fuel() -> Self {
+        let mut s = Self {
+            reagents: BTreeMap::new(),
+            ore_consumed: 0,
+        };
+        s.reagents.insert("FUEL".into(), 1);
+        s
     }
 
-    // fn get_prev_states(&self, reactions: &Vec<Reaction>) -> Vec<Self> {
-    // 	let mut neighbors = Vec::new();
-    // 	'reaction: for reaction in reactions {
-    // 		// Make a clone that we will mutate into the neighbor state
-    // 		let mut neighbor = self.clone();
+    // fn get_next_state(&self, reaction: &Reaction) -> Option<Self> {
+    //     // Make a clone that we will mutate into the neighbor state
+    //     let mut neighbor = self.clone();
     //
-    // 		// Loop through the outputs subtracting them
-    // 		for output in &reaction.outputs {
-    // 			// If we don't have enough, then go on to the next reaction
-    // 			match neighbor.reagents.get(&output.name) {
-    // 				None => { continue 'reaction; },
-    // 				Some(&amount_we_have) => {
-    // 					if amount_we_have < output.quantity {
-    // 						continue 'reaction;
-    // 					}
-    // 					neighbor.reagents.insert(output.name.clone(), amount_we_have - output.quantity);
-    // 				}
-    // 			}
-    // 		}
+    //     // Loop through the inputs subtracting them
+    //     for input in &reaction.inputs {
+    //         // If we don't have enough, then exit early
+    //         match neighbor.reagents.get(&input.name) {
+    //             None => {
+    //                 return None;
+    //             }
+    //             Some(&amount_we_have) => {
+    //                 if amount_we_have < input.quantity {
+    //                     return None;
+    //                 }
+    //                 neighbor
+    //                     .reagents
+    //                     .insert(input.name.clone(), amount_we_have - input.quantity);
+    //             }
+    //         }
+    //     }
     //
-    // 		// If we made it throug hthe outputs without early returning, then this reaction is possible
-    // 		// so update the input quantities too
-    // 		for input in &reaction.inputs {
-    // 			let maybe_amount = neighbor.reagents.get(&input.name);
-    // 			match maybe_amount {
-    // 				None => { neighbor.reagents.insert(input.name.clone(), input.quantity); },
-    // 				Some(&amount_we_have) => {
-    // 					neighbor.reagents.insert(input.name.clone(), input.quantity + amount_we_have);
-    // 				}
-    // 			}
-    // 		}
+    //     // If we made it through the inputs without early returning, then this reaction is possible
+    //     // so update the output quantity too
+    //     *neighbor
+    //         .reagents
+    //         .entry(reaction.output.name.clone())
+    //         .or_insert(0) += reaction.output.quantity;
     //
-    // 		neighbors.push(neighbor);
-    // 	}
-    // 	neighbors
+    //     Some(neighbor)
     // }
 
-    fn get_next_state(&self, reaction: &Reaction) -> Option<Self> {
-        // Make a clone that we will mutate into the neighbor state
-        let mut neighbor = self.clone();
+    fn get_prev_state(&self, reaction: &Reaction) -> Option<Self> {
+        // Make a clone that we will mutate into the previous state
+        let mut prev = self.clone();
 
-        // Loop through the inputs subtracting them
+        // Make sure we have the output necessary, and if so subtract it.
+        let our_output_quantity = prev.reagents.get(&reaction.output.name).unwrap_or(&0);
+        if our_output_quantity <= &0i64 {
+            // This reaction doesn't apply, so return early
+            return None;
+        }
+
+        prev.reagents.insert(
+            reaction.output.name.clone(),
+            our_output_quantity - reaction.output.quantity,
+        );
+
+        // Loop through the inputs adding them
         for input in &reaction.inputs {
-            // If we don't have enough, then exit early
-            match neighbor.reagents.get(&input.name) {
-                None => {
-                    return None;
-                }
-                Some(&amount_we_have) => {
-                    if amount_we_have < input.quantity {
-                        return None;
-                    }
-                    neighbor
-                        .reagents
-                        .insert(input.name.clone(), amount_we_have - input.quantity);
-                }
-            }
+            *prev.reagents.entry(input.name.clone()).or_insert(0) += input.quantity;
         }
-
-        // If we made it through the inputs without early returning, then this reaction is possible
-        // so update the output quantities too
-        for output in &reaction.outputs {
-            match neighbor.reagents.get(&output.name) {
-                None => {
-                    neighbor
-                        .reagents
-                        .insert(output.name.clone(), output.quantity);
-                }
-                Some(&amount_we_have) => {
-                    neighbor
-                        .reagents
-                        .insert(output.name.clone(), output.quantity + amount_we_have);
-                }
-            }
-        }
-
-        Some(neighbor)
+        Some(prev)
     }
 
     fn has_fuel(&self) -> bool {
@@ -127,80 +107,112 @@ impl State {
 #[derive(Hash, Debug, PartialEq, Eq, Clone)]
 pub struct Reaction {
     inputs: Vec<Reagent>,
-    //TODO only one output, so no need to loop
-    outputs: Vec<Reagent>,
+    output: Reagent,
 }
 
-fn dijkstra_solution(reactions: &Vec<Reaction>) -> u64 {
-    // We'll solve the problem using Dijkstra's algorithm to find a path from no resources
-    // to one fules
-    let mut unexplored = HashSet::<State>::new();
-    let mut explored = HashSet::<State>::new();
+// fn dijkstra_solution(reactions: &Vec<Reaction>) -> u64 {
+//     // We'll solve the problem using Dijkstra's algorithm to find a path from no resources
+//     // to one fules
+//     let mut unexplored = HashSet::<State>::new();
+//     let mut explored = HashSet::<State>::new();
+//
+//     // We'll find a path from the
+//     // starting state (empty) to any valid target state (at least one fuel).
+//     unexplored.insert(State::new());
+//
+//     let mut current_state = State::new();
+//
+//     while !current_state.has_fuel() {
+//         println!(
+//             "\n\nIn main dijkstra loop with {} unexplored states",
+//             unexplored.len()
+//         );
+//
+//         // Get an owned instance of the next state to explore
+//         current_state = unexplored
+//             .iter()
+//             .min_by(|x, y| x.ore_consumed.cmp(&y.ore_consumed))
+//             .expect("Unexplored set should not be empty; min_by will return Some(_); qed;")
+//             .clone();
+//
+//         println!("Current state: {:?}", current_state);
+//
+//         // Calculate any states we can transition to by applying a reaction
+//         let neighbors = reactions
+//             .iter()
+//             .filter_map(|r| current_state.get_next_state(r))
+//             .collect::<Vec<_>>();
+//         println!("Found {} neighbors", neighbors.len());
+//
+//         // Mark the current state explored
+//         explored.insert(unexplored.take(&current_state).unwrap());
+//
+//         // We also want to explore gathering more ore because some reactions
+//         // need more than 1 ore.
+//         unexplored.insert(current_state.gather_ore());
+//
+//         // Mark each neighbor as unexplored
+//         for neighbor in neighbors {
+//             println!("{:?}", neighbor);
+//             unexplored.insert(neighbor);
+//         }
+//     }
+//
+//     current_state.ore_consumed
+// }
 
-    // We'll find a path from the
-    // starting state (empty) to any valid target state (at least one fuel).
-    unexplored.insert(State::new());
+/// Calculates the total ore that must be collected to create one fuel.
+/// This solution is much more efficient than Djkstra's but is also less general. This relies on a
+/// few assumptions, that I didn't notice when I first read the problem. Specifically,
+/// 1. Each reaction has exactly one output
+/// 2. Each element can be created by exactly one reaction (except ore)
+fn dependency_traversal_solution(start: &State, reactions: &Vec<Reaction>) -> u64 {
+    let mut current_state = start.clone();
+	let mut prev_state = None;
 
-    let mut current_state = State::new();
+    // Apply each reaction (in reverse) over and over until state stops changing
+    while prev_state != Some(current_state.clone()) {
+		prev_state = Some(current_state.clone());
 
-    while !current_state.has_fuel() {
-        println!(
-            "\n\nIn main dijkstra loop with {} unexplored states",
-            unexplored.len()
-        );
-
-        // Get an owned instance of the next state to explore
-        current_state = unexplored
+        // println!("Current State: {:?}", current_state);
+        // Look through the list of reactions, applying (in reverse) all that can be
+        current_state = reactions
             .iter()
-            .min_by(|x, y| x.ore_consumed.cmp(&y.ore_consumed))
-            .expect("Unexplored set should not be empty; min_by will return Some(_); qed;")
-            .clone();
+            .fold(current_state, |s, r| s.get_prev_state(r).unwrap_or(s));
 
-        println!("Current state: {:?}", current_state);
-
-        // Calculate any states we can transition to by applying a reaction
-        let neighbors = reactions
-            .iter()
-            .filter_map(|r| current_state.get_next_state(r))
-            .collect::<Vec<_>>();
-        println!("Found {} neighbors", neighbors.len());
-
-        // Mark the current state explored
-        explored.insert(unexplored.take(&current_state).unwrap());
-
-        // We also want to explore gathering more ore because some reactions
-        // need more than 1 ore.
-        unexplored.insert(current_state.gather_ore());
-
-        // Mark each neighbor as unexplored
-        for neighbor in neighbors {
-            println!("{:?}", neighbor);
-            unexplored.insert(neighbor);
-        }
+        // std::thread::sleep(std::time::Duration::from_millis(500));
     }
 
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    let signed_answer = *current_state
+        .reagents
+        .get("ORE".into())
+        .expect("We should have some ore at the end or the problem is invalid.");
 
-    current_state.ore_consumed
+    signed_answer
+        .try_into()
+        .expect("The final answer should be positive, so convert it to a u64")
 }
 
 fn main() {
     // Parse the puzzle input, which represents a set of reactions
-    let reactions = parser::parse_reactions(
-        "
-		9 ORE => 2 A
-		8 ORE => 3 B
-		7 ORE => 5 C
-		3 A, 4 B => 1 AB
-		5 B, 7 C => 1 BC
-		4 C, 1 A => 1 CA
-		2 AB, 3 BC, 4 CA => 1 FUEL
-	",
+    let reactions = parser::parse_reactions(&fs::read_to_string("input.txt").expect("file error"));
+	// let reactions = parser::parse_reactions(
+	// "
+	// 	9 ORE => 2 A
+	// 	8 ORE => 3 B
+	// 	7 ORE => 5 C
+	// 	3 A, 4 B => 1 AB
+	// 	5 B, 7 C => 1 BC
+	// 	4 C, 1 A => 1 CA
+	// 	2 AB, 3 BC, 4 CA => 1 FUEL
+	// ",
+	// );
+
+    // println!("Minimal ORE needed (Dijkstra method)  : {}", dijkstra_solution(&reactions));
+    println!(
+        "Minimal ORE needed (Dependency method): {}",
+        dependency_traversal_solution(&State::new_one_fuel(), &reactions)
     );
-
-    let part_1 = dijkstra_solution(&reactions);
-
-    println!("Minimal ORE needed: {}", part_1);
 }
 
 #[test]

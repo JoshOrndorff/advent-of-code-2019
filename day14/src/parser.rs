@@ -13,7 +13,7 @@ fn parse_reaction(s: &str) -> Reaction {
 
     Reaction {
         inputs: parse_reagents(input_str),
-        outputs: parse_reagents(output_str),
+        output: parse_reagent(output_str),
     }
 }
 
