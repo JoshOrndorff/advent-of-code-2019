@@ -1,6 +1,7 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{HashMap, HashSet};
 use std::fs;
 mod parser;
+mod djkstra;
 use std::convert::TryInto;
 
 #[derive(Hash, Debug, PartialEq, Eq, Clone)]
@@ -10,59 +11,27 @@ struct Reagent {
     quantity: i64,
 }
 
-#[derive(Hash, Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 struct State {
-    reagents: BTreeMap<String, i64>,
+    reagents: HashMap<String, i64>,
     ore_consumed: u64,
 }
 
 impl State {
     fn new() -> Self {
         Self {
-            reagents: BTreeMap::new(),
+            reagents: HashMap::new(),
             ore_consumed: 0,
         }
     }
 
     fn new_one_fuel() -> Self {
         let mut s = Self {
-            reagents: BTreeMap::new(),
+            reagents: HashMap::new(),
             ore_consumed: 0,
         };
         s.reagents.insert("FUEL".into(), 1);
         s
-    }
-
-    fn get_next_state(&self, reaction: &Reaction) -> Option<Self> {
-        // Make a clone that we will mutate into the neighbor state
-        let mut neighbor = self.clone();
-
-        // Loop through the inputs subtracting them
-        for input in &reaction.inputs {
-            // If we don't have enough, then exit early
-            match neighbor.reagents.get(&input.name) {
-                None => {
-                    return None;
-                }
-                Some(&amount_we_have) => {
-                    if amount_we_have < input.quantity {
-                        return None;
-                    }
-                    neighbor
-                        .reagents
-                        .insert(input.name.clone(), amount_we_have - input.quantity);
-                }
-            }
-        }
-
-        // If we made it through the inputs without early returning, then this reaction is possible
-        // so update the output quantity too
-        *neighbor
-            .reagents
-            .entry(reaction.output.name.clone())
-            .or_insert(0) += reaction.output.quantity;
-
-        Some(neighbor)
     }
 
     fn get_prev_state(&self, reaction: &Reaction) -> Option<Self> {
@@ -109,48 +78,6 @@ pub struct Reaction {
     output: Reagent,
 }
 
-fn dijkstra_solution(reactions: &Vec<Reaction>) -> u64 {
-    // We'll solve the problem using Dijkstra's algorithm to find a path from no resources
-    // to one fules
-    let mut unexplored = HashSet::<State>::new();
-    let mut explored = HashSet::<State>::new();
-
-    // We'll find a path from the
-    // starting state (empty) to any valid target state (at least one fuel).
-    unexplored.insert(State::new());
-
-    let mut current_state = State::new();
-
-    while !current_state.has_fuel() {
-        // Get an owned instance of the next state to explore
-        current_state = unexplored
-            .iter()
-            .min_by(|x, y| x.ore_consumed.cmp(&y.ore_consumed))
-            .expect("Unexplored set should not be empty; min_by will return Some(_); qed;")
-            .clone();
-
-        // Calculate any states we can transition to by applying a reaction
-        let neighbors = reactions
-            .iter()
-            .filter_map(|r| current_state.get_next_state(r))
-            .collect::<Vec<_>>();
-
-        // Mark the current state explored
-        explored.insert(unexplored.take(&current_state).unwrap());
-
-        // We also want to explore gathering more ore because some reactions
-        // need more than 1 ore.
-        unexplored.insert(current_state.gather_ore());
-
-        // Mark each neighbor as unexplored
-        for neighbor in neighbors {
-            unexplored.insert(neighbor);
-        }
-    }
-
-    current_state.ore_consumed
-}
-
 /// Calculates the total ore that must be collected to create one fuel.
 /// This solution is much more efficient than Djkstra's but is also less general. This relies on a
 /// few assumptions, that I didn't notice when I first read the problem. Specifically,
@@ -186,12 +113,42 @@ fn main() {
 
     println!(
         "Minimal ORE needed (Dijkstra method)  : {}",
-        dijkstra_solution(&reactions)
+        djkstra::dijkstra_solution(&reactions)
     );
-    println!(
-        "Minimal ORE needed (Dependency method): {}",
-        dependency_traversal_solution(&State::new_one_fuel(), &reactions)
-    );
+
+	return;
+
+	// Part 1
+	let rough_ore_per_fuel = 907302u64;
+	// let rough_ore_per_fuel = dependency_traversal_solution(&State::new_one_fuel(), &reactions);
+    // println!(
+    //     "Minimal ORE needed (Dependency method): {}",
+    //     rough_ore_per_fuel
+    // );
+
+	// Part 2
+
+	// For part 2 we'll use the binary search to find the maximum number of fuel we can
+	// create with the 1 trillion ore we collected.
+
+	// Begin by bracketing the potential solution
+	// The worst possible case is that it takes as many ore to make each fuel as it took to make
+	// the first one.
+	let mut max = rough_ore_per_fuel * 1_000_000_000_000;
+
+	// Assume it will take at least 90% of that worst case
+	let mut min = max * 9 / 10;
+
+	// The guess at how much ore we'll need. We don't actually guess 0, this value is mutated
+	// right after entering the loop.
+	let mut candidate = 0u64;
+
+	// Now implement a basic binary search
+	while min < max {
+		candidate = (max + min) / 2;
+
+		break;
+	}
 }
 
 #[test]
