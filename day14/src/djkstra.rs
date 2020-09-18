@@ -1,6 +1,6 @@
+use super::{Reaction, Reagent};
 use std::collections::{BTreeMap, HashSet};
 use std::convert::TryInto;
-use super::{Reagent, Reaction};
 
 #[derive(Hash, Debug, PartialEq, Eq, Clone)]
 struct State {
@@ -150,6 +150,6 @@ fn first_example() {
 
     let reactions = parser::parse_reactions(input);
 
-	// This one is small so Djkstra can actually solve it
+    // This one is small so Djkstra can actually solve it
     assert_eq!(dijkstra_solution(&reactions), 31);
 }

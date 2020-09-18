@@ -1,8 +1,10 @@
-use std::collections::{HashMap, HashSet};
-use std::fs;
-mod parser;
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryInto,
+    fs,
+};
 mod djkstra;
-use std::convert::TryInto;
+mod parser;
 
 #[derive(Hash, Debug, PartialEq, Eq, Clone)]
 struct Reagent {
@@ -111,44 +113,43 @@ fn main() {
     // Parse the puzzle input, which represents a set of reactions
     let reactions = parser::parse_reactions(&fs::read_to_string("input.txt").expect("file error"));
 
-    println!(
-        "Minimal ORE needed (Dijkstra method)  : {}",
-        djkstra::dijkstra_solution(&reactions)
-    );
-
-	return;
-
-	// Part 1
-	let rough_ore_per_fuel = 907302u64;
-	// let rough_ore_per_fuel = dependency_traversal_solution(&State::new_one_fuel(), &reactions);
+    // I initially solved part1 using Djkstra's algorithm which is correct, but is too slow.
     // println!(
-    //     "Minimal ORE needed (Dependency method): {}",
-    //     rough_ore_per_fuel
+    //     "Minimal ORE needed (Dijkstra method)  : {}",
+    //     djkstra::dijkstra_solution(&reactions)
     // );
 
-	// Part 2
+    // Part 1
+    let rough_ore_per_fuel = 907302u64;
+    // let rough_ore_per_fuel = dependency_traversal_solution(&State::new_one_fuel(), &reactions);
+    println!(
+        "Minimal ORE needed (Dependency method): {}",
+        rough_ore_per_fuel
+    );
 
-	// For part 2 we'll use the binary search to find the maximum number of fuel we can
-	// create with the 1 trillion ore we collected.
+    // Part 2
 
-	// Begin by bracketing the potential solution
-	// The worst possible case is that it takes as many ore to make each fuel as it took to make
-	// the first one.
-	let mut max = rough_ore_per_fuel * 1_000_000_000_000;
+    // For part 2 we'll use the binary search to find the maximum number of fuel we can
+    // create with the 1 trillion ore we collected.
 
-	// Assume it will take at least 90% of that worst case
-	let mut min = max * 9 / 10;
+    // Begin by bracketing the potential solution
+    // The worst possible case is that it takes as many ore to make each fuel as it took to make
+    // the first one.
+    let mut max = rough_ore_per_fuel * 1_000_000_000_000;
 
-	// The guess at how much ore we'll need. We don't actually guess 0, this value is mutated
-	// right after entering the loop.
-	let mut candidate = 0u64;
+    // Assume it will take at least 90% of that worst case
+    let mut min = max * 9 / 10;
 
-	// Now implement a basic binary search
-	while min < max {
-		candidate = (max + min) / 2;
+    // The guess at how much ore we'll need. We don't actually guess 0, this value is mutated
+    // right after entering the loop.
+    let mut candidate = 0u64;
 
-		break;
-	}
+    // Now implement a basic binary search
+    while min < max {
+        candidate = (max + min) / 2;
+
+        break;
+    }
 }
 
 #[test]
@@ -164,9 +165,12 @@ fn first_example() {
 
     let reactions = parser::parse_reactions(input);
 
-	// This one is small so test it with djkstra as well
+    // This one is small so test it with djkstra as well
     assert_eq!(dijkstra_solution(&reactions), 31);
-	assert_eq!(dependency_traversal_solution(&State::new_one_fuel(), &reactions), 31);
+    assert_eq!(
+        dependency_traversal_solution(&State::new_one_fuel(), &reactions),
+        31
+    );
 }
 
 #[test]
@@ -183,7 +187,10 @@ fn second_example() {
 
     let reactions = parser::parse_reactions(input);
 
-	// This one is larger, so only test it with reverse traversal
+    // This one is larger, so only test it with reverse traversal
     // assert_eq!(dijkstra_solution(&reactions), 165);
-	assert_eq!(dependency_traversal_solution(&State::new_one_fuel(), &reactions), 165);
+    assert_eq!(
+        dependency_traversal_solution(&State::new_one_fuel(), &reactions),
+        165
+    );
 }
