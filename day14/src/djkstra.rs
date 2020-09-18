@@ -1,4 +1,4 @@
-use super::{Reaction, Reagent};
+use super::{parser, Reaction, Reagent};
 use std::collections::{BTreeMap, HashSet};
 use std::convert::TryInto;
 

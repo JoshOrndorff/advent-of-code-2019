@@ -16,23 +16,20 @@ struct Reagent {
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct State {
     reagents: HashMap<String, i64>,
-    ore_consumed: u64,
 }
 
 impl State {
     fn new() -> Self {
         Self {
             reagents: HashMap::new(),
-            ore_consumed: 0,
         }
     }
 
-    fn new_one_fuel() -> Self {
+    fn new_with_fuel(amt: u64) -> Self {
         let mut s = Self {
             reagents: HashMap::new(),
-            ore_consumed: 0,
         };
-        s.reagents.insert("FUEL".into(), 1);
+        s.reagents.insert("FUEL".into(), amt.try_into().unwrap());
         s
     }
 
@@ -65,13 +62,6 @@ impl State {
             Some(amount) => amount > &0,
         }
     }
-
-    fn gather_ore(&self) -> Self {
-        let mut next_state = self.clone();
-        *next_state.reagents.entry("ORE".into()).or_insert(0) += 1;
-        next_state.ore_consumed += 1;
-        next_state
-    }
 }
 
 #[derive(Hash, Debug, PartialEq, Eq, Clone)]
@@ -92,6 +82,8 @@ fn dependency_traversal_solution(start: &State, reactions: &Vec<Reaction>) -> u6
     // Apply each reaction (in reverse) over and over until state stops changing
     while prev_state != Some(current_state.clone()) {
         prev_state = Some(current_state.clone());
+
+        println!("{:?}", current_state);
 
         // Look through the list of reactions, applying (in reverse) all that can be
         current_state = reactions
@@ -121,7 +113,7 @@ fn main() {
 
     // Part 1
     let rough_ore_per_fuel = 907302u64;
-    // let rough_ore_per_fuel = dependency_traversal_solution(&State::new_one_fuel(), &reactions);
+    // let rough_ore_per_fuel = dependency_traversal_solution(&State::new_with_fuel(1), &reactions);
     println!(
         "Minimal ORE needed (Dependency method): {}",
         rough_ore_per_fuel
@@ -131,11 +123,12 @@ fn main() {
 
     // For part 2 we'll use the binary search to find the maximum number of fuel we can
     // create with the 1 trillion ore we collected.
+    const TARGET_ORE: u64 = 1_000_000_000_000;
 
     // Begin by bracketing the potential solution
     // The worst possible case is that it takes as many ore to make each fuel as it took to make
     // the first one.
-    let mut max = rough_ore_per_fuel * 1_000_000_000_000;
+    let mut max = rough_ore_per_fuel * TARGET_ORE;
 
     // Assume it will take at least 90% of that worst case
     let mut min = max * 9 / 10;
@@ -147,6 +140,10 @@ fn main() {
     // Now implement a basic binary search
     while min < max {
         candidate = (max + min) / 2;
+        println!("The first candidate to try is {} fuel", candidate);
+
+        let ore_needed =
+            dependency_traversal_solution(&State::new_with_fuel(candidate), &reactions);
 
         break;
     }
@@ -165,10 +162,8 @@ fn first_example() {
 
     let reactions = parser::parse_reactions(input);
 
-    // This one is small so test it with djkstra as well
-    assert_eq!(dijkstra_solution(&reactions), 31);
     assert_eq!(
-        dependency_traversal_solution(&State::new_one_fuel(), &reactions),
+        dependency_traversal_solution(&State::new_with_fuel(1), &reactions),
         31
     );
 }
@@ -187,10 +182,8 @@ fn second_example() {
 
     let reactions = parser::parse_reactions(input);
 
-    // This one is larger, so only test it with reverse traversal
-    // assert_eq!(dijkstra_solution(&reactions), 165);
     assert_eq!(
-        dependency_traversal_solution(&State::new_one_fuel(), &reactions),
+        dependency_traversal_solution(&State::new_with_fuel(1), &reactions),
         165
     );
 }
