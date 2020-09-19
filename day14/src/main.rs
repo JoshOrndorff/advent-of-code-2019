@@ -25,9 +25,8 @@ pub struct Reaction {
 }
 
 fn depends_on(target: &String, dependency: &String, reactions: &Vec<Reaction>) -> bool {
-
-	// println!("checking whether {} depends on {}", target, dependency);
-	match reactions.iter().filter(|r| &r.output.name == target).nth(0) {
+    // println!("checking whether {} depends on {}", target, dependency);
+    match reactions.iter().filter(|r| &r.output.name == target).nth(0) {
         None => {
             // There is no recipe for this element. So it must be ORE. So we never encountered
             // the dependency in question
@@ -45,8 +44,8 @@ fn depends_on(target: &String, dependency: &String, reactions: &Vec<Reaction>) -
             } else {
                 // Not a direct dependency, so recurse
                 recipe.inputs.iter().fold(false, |so_far, input| {
-					// Something to investigate: I initially forgot the `so_far ||`
-					// but could never make a test fail.
+                    // Something to investigate: I initially forgot the `so_far ||`
+                    // but could never make a test fail.
                     so_far || depends_on(&input.name, dependency, reactions)
                 })
             }
@@ -69,7 +68,7 @@ fn dependency_traversal_solution(
         .count()
         > 0
     {
-        println!("\n\nAnalyzing targets {:?}", targets);
+        // println!("\n\nAnalyzing targets {:?}", targets);
 
         // First find a target that can be analyzed right now. O(n2)
         // A target can be analyzed now iff none of the other targets depend on it
@@ -77,14 +76,14 @@ fn dependency_traversal_solution(
         'outer: for target in targets.iter() {
             for other_target in targets.iter() {
                 if depends_on(&other_target.0, &target.0, reactions) {
-					println!("{} depends on {}", target.0, other_target.0);
+                    // println!("{} depends on {}", target.0, other_target.0);
                     continue 'outer;
                 }
             }
             build_now = target.0.clone();
         }
 
-        println!("{} can be built now ", build_now);
+        // println!("{} can be built now ", build_now);
 
         // Look up the recipe to build the target
         let reaction = reactions
@@ -104,7 +103,7 @@ fn dependency_traversal_solution(
                 1
             };
 
-        println!("{:?} can be applied {} times", reaction, times_to_apply);
+        // println!("{:?} can be applied {} times", reaction, times_to_apply);
 
         // We do't need to "substract" the output. We're creating all that we need, so just remove it.
         targets.remove(&reaction.output.name);
@@ -126,17 +125,6 @@ fn main() {
     // Parse the puzzle input, which represents a set of reactions
     let reactions = parser::parse_reactions(&fs::read_to_string("input.txt").expect("file error"));
 
-    // let input = "
-    //     10 ORE => 10 A
-    //     1 ORE => 1 B
-    //     7 A, 1 B => 1 C
-    //     7 A, 1 C => 1 D
-    //     7 A, 1 D => 1 E
-    //     7 A, 1 E => 1 FUEL
-    // ";
-
-    // let reactions = parser::parse_reactions(input);
-
     // I initially solved part1 using Djkstra's algorithm which is correct, but is too slow.
     // println!(
     //     "Minimal ORE needed (Dijkstra method)  : {}",
@@ -151,34 +139,46 @@ fn main() {
         rough_ore_per_fuel
     );
 
-    // // Part 2
-    //
-    // // For part 2 we'll use the binary search to find the maximum number of fuel we can
-    // // create with the 1 trillion ore we collected.
-    // const COLLECTED_ORE: u64 = 1_000_000_000_000;
-    //
-    // // Begin by bracketing the potential solution
-    // // The worst possible case is that it takes as many ore to make each fuel as it took to make
-    // // the first one.
-    // let mut min = COLLECTED_ORE / rough_ore_per_fuel;
-    //
-    // // Assume we'll yield at most 10% more than that worst case
-    // let mut max = min * 11 / 10;
-    //
-    // // The guess at how much ore we'll need. We don't actually guess 0, this value is mutated
-    // // right after entering the loop.
-    // let mut candidate = 0u64;
-    //
-    // // Now implement a basic binary search
-    // while min < max {
-    //     candidate = (max + min) / 2;
-    //     println!("The first candidate to try is {} fuel", candidate);
-    //
-    //     let ore_needed =
-    //         dependency_traversal_solution(&State::new_with_fuel(candidate), &reactions);
-    //
-    //     break;
-    // }
+    // Part 2
+
+    // For part 2 we'll use the binary search to find the maximum number of fuel we can
+    // create with the 1 trillion ore we collected.
+    const COLLECTED_ORE: u64 = 1_000_000_000_000;
+
+    // Begin by bracketing the potential solution
+    // The worst possible case is that it takes as many ore to make each fuel as it took to make
+    // the first one.
+    let mut min_fuel = COLLECTED_ORE / rough_ore_per_fuel;
+
+    // Assume we'll yield at most double that worst case
+    let mut max_fuel = min_fuel * 2;
+
+    // The guess at how much ore we'll need. We don't actually guess 0, this value is mutated
+    // right after entering the loop.
+    let mut candidate = 0u64;
+
+    // Now implement a basic binary search
+    while min_fuel < max_fuel {
+        candidate = (max_fuel + min_fuel) / 2;
+
+        let ore_needed = dependency_traversal_solution(&mut needs_with_fuel(candidate), &reactions);
+
+        let percent = (ore_needed as f64) / (COLLECTED_ORE as f64) * 100.0;
+
+        println!(
+            "It takes {} ore ({:.0}%) to make {} fuel",
+            ore_needed, percent, candidate
+        );
+
+        // TODO some off-by-one error here, but I still found the answer
+        if ore_needed < COLLECTED_ORE {
+            min_fuel = candidate;
+        } else {
+            max_fuel = candidate;
+        }
+    }
+
+    println!("The most fuel we can make is {}", max_fuel);
 }
 
 // #[test]
