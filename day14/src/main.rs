@@ -3,65 +3,19 @@ use std::{
     convert::TryInto,
     fs,
 };
-mod djkstra;
 mod parser;
 
 #[derive(Hash, Debug, PartialEq, Eq, Clone)]
 struct Reagent {
     //TODO should I be using &str everywhere?
     name: String,
-    quantity: i64,
+    quantity: u64,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-struct State {
-    reagents: HashMap<String, i64>,
-}
-
-impl State {
-    fn new() -> Self {
-        Self {
-            reagents: HashMap::new(),
-        }
-    }
-
-    fn new_with_fuel(amt: u64) -> Self {
-        let mut s = Self {
-            reagents: HashMap::new(),
-        };
-        s.reagents.insert("FUEL".into(), amt.try_into().unwrap());
-        s
-    }
-
-    fn get_prev_state(&self, reaction: &Reaction) -> Option<Self> {
-        // Make a clone that we will mutate into the previous state
-        let mut prev = self.clone();
-
-        // Make sure we have the output necessary, and if so subtract it.
-        let our_output_quantity = prev.reagents.get(&reaction.output.name).unwrap_or(&0);
-        if our_output_quantity <= &0i64 {
-            // This reaction doesn't apply, so return early
-            return None;
-        }
-
-        prev.reagents.insert(
-            reaction.output.name.clone(),
-            our_output_quantity - reaction.output.quantity,
-        );
-
-        // Loop through the inputs adding them
-        for input in &reaction.inputs {
-            *prev.reagents.entry(input.name.clone()).or_insert(0) += input.quantity;
-        }
-        Some(prev)
-    }
-
-    fn has_fuel(&self) -> bool {
-        match self.reagents.get("FUEL".into()) {
-            None => false,
-            Some(amount) => amount > &0,
-        }
-    }
+fn needs_with_fuel(amt: u64) -> HashMap<String, u64> {
+    let mut s = HashMap::new();
+    s.insert("FUEL".into(), amt);
+    s
 }
 
 #[derive(Hash, Debug, PartialEq, Eq, Clone)]
@@ -70,40 +24,118 @@ pub struct Reaction {
     output: Reagent,
 }
 
+fn depends_on(target: &String, dependency: &String, reactions: &Vec<Reaction>) -> bool {
+
+	// println!("checking whether {} depends on {}", target, dependency);
+	match reactions.iter().filter(|r| &r.output.name == target).nth(0) {
+        None => {
+            // There is no recipe for this element. So it must be ORE. So we never encountered
+            // the dependency in question
+            false
+        }
+        Some(recipe) => {
+            if recipe
+                .inputs
+                .iter()
+                .find(|i| &i.name == dependency)
+                .is_some()
+            {
+                // It is a direct dependency
+                true
+            } else {
+                // Not a direct dependency, so recurse
+                recipe.inputs.iter().fold(false, |so_far, input| {
+					// Something to investigate: I initially forgot the `so_far ||`
+					// but could never make a test fail.
+                    so_far || depends_on(&input.name, dependency, reactions)
+                })
+            }
+        }
+    }
+}
+
 /// Calculates the total ore that must be collected to create one fuel.
 /// This solution is much more efficient than Djkstra's but is also less general. This relies on a
 /// few assumptions, that I didn't notice when I first read the problem. Specifically,
 /// 1. Each reaction has exactly one output
 /// 2. Each element can be created by exactly one reaction (except ore)
-fn dependency_traversal_solution(start: &State, reactions: &Vec<Reaction>) -> u64 {
-    let mut current_state = start.clone();
-    let mut prev_state = None;
+fn dependency_traversal_solution(
+    targets: &mut HashMap<String, u64>,
+    reactions: &Vec<Reaction>,
+) -> u64 {
+    while targets
+        .iter()
+        .filter(|(name, _)| name != &&String::from("ORE"))
+        .count()
+        > 0
+    {
+        println!("\n\nAnalyzing targets {:?}", targets);
 
-    // Apply each reaction (in reverse) over and over until state stops changing
-    while prev_state != Some(current_state.clone()) {
-        prev_state = Some(current_state.clone());
+        // First find a target that can be analyzed right now. O(n2)
+        // A target can be analyzed now iff none of the other targets depend on it
+        let mut build_now = String::from("nothing");
+        'outer: for target in targets.iter() {
+            for other_target in targets.iter() {
+                if depends_on(&other_target.0, &target.0, reactions) {
+					println!("{} depends on {}", target.0, other_target.0);
+                    continue 'outer;
+                }
+            }
+            build_now = target.0.clone();
+        }
 
-        println!("{:?}", current_state);
+        println!("{} can be built now ", build_now);
 
-        // Look through the list of reactions, applying (in reverse) all that can be
-        current_state = reactions
+        // Look up the recipe to build the target
+        let reaction = reactions
             .iter()
-            .fold(current_state, |s, r| s.get_prev_state(r).unwrap_or(s));
+            .filter(|r| &r.output.name == &build_now)
+            .nth(0)
+            .expect("There is a reaction for ever chemical");
+
+        // Figure out how many times this reaction can be applied
+        let quantity_needed = targets
+            .get(&reaction.output.name)
+            .expect("we got this target from the targets map in the first place");
+        let times_to_apply = quantity_needed / reaction.output.quantity
+            + if quantity_needed % reaction.output.quantity == 0 {
+                0
+            } else {
+                1
+            };
+
+        println!("{:?} can be applied {} times", reaction, times_to_apply);
+
+        // We do't need to "substract" the output. We're creating all that we need, so just remove it.
+        targets.remove(&reaction.output.name);
+
+        // Increase the inputs
+        for input in &reaction.inputs {
+            *targets.entry(input.name.clone()).or_insert(0) += times_to_apply * input.quantity;
+        }
+
+        // std::thread::sleep(std::time::Duration::from_millis(500));
     }
 
-    let signed_answer = *current_state
-        .reagents
-        .get("ORE".into())
-        .expect("We should have some ore at the end or the problem is invalid.");
-
-    signed_answer
-        .try_into()
-        .expect("The final answer should be positive, so convert it to a u64")
+    *targets
+        .get("ORE")
+        .expect("The problem states we should only need ore")
 }
 
 fn main() {
     // Parse the puzzle input, which represents a set of reactions
     let reactions = parser::parse_reactions(&fs::read_to_string("input.txt").expect("file error"));
+
+    // let input = "
+    //     10 ORE => 10 A
+    //     1 ORE => 1 B
+    //     7 A, 1 B => 1 C
+    //     7 A, 1 C => 1 D
+    //     7 A, 1 D => 1 E
+    //     7 A, 1 E => 1 FUEL
+    // ";
+
+    // let reactions = parser::parse_reactions(input);
 
     // I initially solved part1 using Djkstra's algorithm which is correct, but is too slow.
     // println!(
@@ -112,45 +144,84 @@ fn main() {
     // );
 
     // Part 1
-    let rough_ore_per_fuel = 907302u64;
-    // let rough_ore_per_fuel = dependency_traversal_solution(&State::new_with_fuel(1), &reactions);
+    // let rough_ore_per_fuel = 907302u64;
+    let rough_ore_per_fuel = dependency_traversal_solution(&mut needs_with_fuel(1), &reactions);
     println!(
         "Minimal ORE needed (Dependency method): {}",
         rough_ore_per_fuel
     );
 
-    // Part 2
-
-    // For part 2 we'll use the binary search to find the maximum number of fuel we can
-    // create with the 1 trillion ore we collected.
-    const TARGET_ORE: u64 = 1_000_000_000_000;
-
-    // Begin by bracketing the potential solution
-    // The worst possible case is that it takes as many ore to make each fuel as it took to make
-    // the first one.
-    let mut max = rough_ore_per_fuel * TARGET_ORE;
-
-    // Assume it will take at least 90% of that worst case
-    let mut min = max * 9 / 10;
-
-    // The guess at how much ore we'll need. We don't actually guess 0, this value is mutated
-    // right after entering the loop.
-    let mut candidate = 0u64;
-
-    // Now implement a basic binary search
-    while min < max {
-        candidate = (max + min) / 2;
-        println!("The first candidate to try is {} fuel", candidate);
-
-        let ore_needed =
-            dependency_traversal_solution(&State::new_with_fuel(candidate), &reactions);
-
-        break;
-    }
+    // // Part 2
+    //
+    // // For part 2 we'll use the binary search to find the maximum number of fuel we can
+    // // create with the 1 trillion ore we collected.
+    // const COLLECTED_ORE: u64 = 1_000_000_000_000;
+    //
+    // // Begin by bracketing the potential solution
+    // // The worst possible case is that it takes as many ore to make each fuel as it took to make
+    // // the first one.
+    // let mut min = COLLECTED_ORE / rough_ore_per_fuel;
+    //
+    // // Assume we'll yield at most 10% more than that worst case
+    // let mut max = min * 11 / 10;
+    //
+    // // The guess at how much ore we'll need. We don't actually guess 0, this value is mutated
+    // // right after entering the loop.
+    // let mut candidate = 0u64;
+    //
+    // // Now implement a basic binary search
+    // while min < max {
+    //     candidate = (max + min) / 2;
+    //     println!("The first candidate to try is {} fuel", candidate);
+    //
+    //     let ore_needed =
+    //         dependency_traversal_solution(&State::new_with_fuel(candidate), &reactions);
+    //
+    //     break;
+    // }
 }
 
+// #[test]
+// fn first_example() {
+//     let input = "
+//         10 ORE => 10 A
+//         1 ORE => 1 B
+//         7 A, 1 B => 1 C
+//         7 A, 1 C => 1 D
+//         7 A, 1 D => 1 E
+//         7 A, 1 E => 1 FUEL
+//     ";
+//
+//     let reactions = parser::parse_reactions(input);
+//
+//     assert_eq!(
+//         dependency_traversal_solution(&mut needs_with_fuel(1), &reactions),
+//         31
+//     );
+// }
+//
+// #[test]
+// fn second_example() {
+//     let input = "
+//         9 ORE => 2 A
+//         8 ORE => 3 B
+//         7 ORE => 5 C
+//         3 A, 4 B => 1 AB
+//         5 B, 7 C => 1 BC
+//         4 C, 1 A => 1 CA
+//         2 AB, 3 BC, 4 CA => 1 FUEL
+//     ";
+//
+//     let reactions = parser::parse_reactions(input);
+//
+//     assert_eq!(
+//         dependency_traversal_solution(&mut needs_with_fuel(1), &reactions),
+//         165
+//     );
+// }
+
 #[test]
-fn first_example() {
+fn depends_on_fuel_ore() {
     let input = "
         10 ORE => 10 A
         1 ORE => 1 B
@@ -162,28 +233,90 @@ fn first_example() {
 
     let reactions = parser::parse_reactions(input);
 
-    assert_eq!(
-        dependency_traversal_solution(&State::new_with_fuel(1), &reactions),
-        31
-    );
+    assert!(depends_on(
+        &String::from("FUEL"),
+        &String::from("ORE"),
+        &reactions
+    ));
 }
 
 #[test]
-fn second_example() {
+fn depends_on_a_b() {
     let input = "
-        9 ORE => 2 A
-        8 ORE => 3 B
-        7 ORE => 5 C
-        3 A, 4 B => 1 AB
-        5 B, 7 C => 1 BC
-        4 C, 1 A => 1 CA
-        2 AB, 3 BC, 4 CA => 1 FUEL
+        10 ORE => 10 A
+        1 ORE => 1 B
+        7 A, 1 B => 1 C
+        7 A, 1 C => 1 D
+        7 A, 1 D => 1 E
+        7 A, 1 E => 1 FUEL
     ";
 
     let reactions = parser::parse_reactions(input);
 
-    assert_eq!(
-        dependency_traversal_solution(&State::new_with_fuel(1), &reactions),
-        165
-    );
+    assert!(!depends_on(
+        &String::from("A"),
+        &String::from("B"),
+        &reactions
+    ));
+}
+
+#[test]
+fn depends_on_c_a() {
+    let input = "
+        10 ORE => 10 A
+        1 ORE => 1 B
+        7 A, 1 B => 1 C
+        7 A, 1 C => 1 D
+        7 A, 1 D => 1 E
+        7 A, 1 E => 1 FUEL
+    ";
+
+    let reactions = parser::parse_reactions(input);
+
+    assert!(depends_on(
+        &String::from("C"),
+        &String::from("A"),
+        &reactions
+    ));
+}
+
+#[test]
+fn doesnt_depend_on_self() {
+    let input = "
+        10 ORE => 10 A
+        1 ORE => 1 B
+        7 A, 1 B => 1 C
+        7 A, 1 C => 1 D
+        7 A, 1 D => 1 E
+        7 A, 1 E => 1 FUEL
+    ";
+
+    let reactions = parser::parse_reactions(input);
+
+    assert!(!depends_on(
+        &String::from("C"),
+        &String::from("C"),
+        &reactions
+    ));
+}
+
+#[test]
+fn fuel_depends_on_d() {
+    let input = "
+        10 ORE => 10 X
+        1 ORE => 1 B
+        7 A, 1 B => 1 C
+        7 A, 1 C => 1 D
+        7 A, 1 D => 1 E
+        7 A, 1 E => 1 FUEL
+		1 X => 1 A
+    ";
+
+    let reactions = parser::parse_reactions(input);
+
+    assert!(depends_on(
+        &String::from("FUEL"),
+        &String::from("D"),
+        &reactions
+    ));
 }
